@@ -11,8 +11,6 @@ import Vector exposing (..)
 import ViewUtils exposing (..)
 
 
-
-
 popSize : Int
 popSize =
     35
@@ -65,7 +63,7 @@ copyBall r =
 type Msg
     = Tick Time
     | BallInit (List Ball)
-    |EvolutionStart (List EvolutionStructure)
+    | EvolutionStart (List EvolutionStructure)
 
 
 type alias Model =
@@ -94,12 +92,14 @@ init =
     }
 
 
-update  msg model =
+update msg model =
     case msg of
         BallInit newBalls ->
             ( { model | balls = newBalls }, Cmd.none )
+
         EvolutionStart evolutionStructure ->
-            ( evolution model evolutionStructure ,Cmd.none)
+            ( evolution model evolutionStructure, Cmd.none )
+
         Tick time ->
             let
                 f =
@@ -107,28 +107,28 @@ update  msg model =
             in
             if model.counter < 400 then
                 ( { model | balls = f, counter = model.counter + 1 }, Cmd.none )
-
             else
-                ( model, Cmd.none ) 
+                ( model, Cmd.none )
                     |> evaluate
                     |> selection
 
 
-selection ( model, msg )  =
-    (  model , Random.generate EvolutionStart (newPopulationGenerator model.popSize model.matingPool) )
+selection ( model, msg ) =
+    ( model, Random.generate EvolutionStart (newPopulationGenerator model.popSize model.matingPool) )
 
 
-type alias Rect = {
-    pos : Vector
-    ,width: Float
-    ,height: Float
-}
+type alias Rect =
+    { pos : Vector
+    , width : Float
+    , height : Float
+    }
+
 
 obstacle : Rect
-obstacle = {
-    pos = Vector 20 60
-    ,width = 60
-    ,height = 3
+obstacle =
+    { pos = Vector 20 60
+    , width = 60
+    , height = 3
     }
 
 
@@ -167,10 +167,9 @@ viewSvg model =
         )
 
 
-
-
 renderObstacle =
-    [rect [ x (toString obstacle.pos.x), y (toString obstacle.pos.y), width (toString obstacle.width), height (toString obstacle.height), fill "blue" ] []]
+    [ rect [ x (toString obstacle.pos.x), y (toString obstacle.pos.y), width (toString obstacle.width), height (toString obstacle.height), fill "blue" ] [] ]
+
 
 widthSize =
     100
@@ -226,15 +225,24 @@ updateBall r genes counter =
             else
                 ( False, Vector r.position.x r.position.y )
 
-
         checkCrashed =
-            if (r.position.x + 2) > widthSize || (r.position.x - 2 ) < 0 then
+            if (r.position.x + 2) > widthSize || (r.position.x - 2) < 0 then
                 True
             else if (r.position.y + 2) > heightSize || (r.position.y - 2) < 0 then
                 True
-            else if r.position.x > obstacle.pos.x &&  r.position.x < obstacle.pos.x + obstacle.width
-                    && r.position.y > obstacle.pos.y && r.position.y < obstacle.pos.y + obstacle.height then
-                True 
+            else if
+                r.position.x
+                    > obstacle.pos.x
+                    && r.position.x
+                    < obstacle.pos.x
+                    + obstacle.width
+                    && r.position.y
+                    > obstacle.pos.y
+                    && r.position.y
+                    < obstacle.pos.y
+                    + obstacle.height
+            then
+                True
             else
                 False
     in
@@ -251,36 +259,40 @@ type alias EvolutionStructure =
     }
 
 
-
-
-
-
 mutateChild : List Vector -> List ( Float, Vector ) -> List Vector
 mutateChild genes mutatedData =
     List.map2
-        (\r ( chance, cord ) ->
+        (\originalVector ( chance, newVector ) ->
             if chance < 0.01 then
-                cord
+                newVector
             else
-                r
+                originalVector
         )
         genes
         mutatedData
+
 
 crossoverDnas : List Vector -> List Vector -> Int -> List Vector
 crossoverDnas dna1 dna2 splitIndex =
     let
         ( dnaPart1, dnaPart2 ) =
-            ( List.take splitIndex  dna1, List.drop splitIndex dna2 )
+            ( List.take splitIndex dna1, List.drop splitIndex dna2 )
     in
-        List.append dnaPart1 dnaPart2
+    List.append dnaPart1 dnaPart2
+
 
 ballSelection : Ball -> EvolutionStructure -> Array.Array Ball -> Ball
 ballSelection ball e matingPool =
     let
-        ( parentAIndex, parentBIndex ) = e.parentsIndex
-        mutationGenes = e.genes
-        parentA = Array.get parentAIndex matingPool
+        ( parentAIndex, parentBIndex ) =
+            e.parentsIndex
+
+        mutationGenes =
+            e.genes
+
+        parentA =
+            Array.get parentAIndex matingPool
+
         parentB =
             Array.get parentBIndex matingPool
 
@@ -290,11 +302,13 @@ ballSelection ball e matingPool =
         parentBBall =
             Maybe.withDefault ball parentB
 
-        crossing = crossoverDnas parentABall.genes parentBBall.genes e.randomCrossing
+        crossing =
+            crossoverDnas parentABall.genes parentBBall.genes e.randomCrossing
 
-        newGenes = mutateChild crossing e.genes
+        newGenes =
+            mutateChild crossing e.genes
     in
-    { ball | completed = False, crashed = False, fitness = 0,position = Vector 50 95 ,acceleration = Vector 0 0, velocity = Vector 0 0 ,genes = newGenes }
+    { ball | completed = False, crashed = False, fitness = 0, position = Vector 50 95, acceleration = Vector 0 0, velocity = Vector 0 0, genes = newGenes }
 
 
 evolution : Model -> List EvolutionStructure -> Model
@@ -303,7 +317,7 @@ evolution model evolution =
         newBalls =
             List.map2 (\r e -> ballSelection r e (Array.fromList model.matingPool)) model.balls evolution
     in
-    { model | balls = newBalls ,matingPool = [] ,counter = 0 }
+    { model | balls = newBalls, matingPool = [], counter = 0 }
 
 
 createEvolutionStructure g p r =
@@ -389,14 +403,17 @@ evaluateBall ball =
     List.repeat (round ball.fitness * 100) (copyBall ball)
 
 
-evaluate : (Model,Cmd Msg) -> ( Model, Cmd Msg )
-evaluate (model , msg) =
+evaluate : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+evaluate ( model, msg ) =
     let
-        ballWithFitness = List.map (\f -> { f | fitness = calculateFitness f.position target ( f.crashed, f.completed ) widthSize }) <| model.balls
+        ballWithFitness =
+            List.map (\f -> { f | fitness = calculateFitness f.position target ( f.crashed, f.completed ) widthSize }) <| model.balls
 
-        fitness = List.map (\r -> r.fitness) ballWithFitness
+        fitness =
+            List.map (\r -> r.fitness) ballWithFitness
 
-        sorted = List.sort fitness
+        sorted =
+            List.sort fitness
 
         maxFit =
             case List.foldl (::) [] sorted |> List.head of
@@ -412,7 +429,4 @@ evaluate (model , msg) =
         matingpool =
             List.concat (List.map (\r -> evaluateBall r) normalizedBall)
     in
-    ({ model | balls = normalizedBall, matingPool = matingpool, counter = 400 }, msg)
-
-
-
+    ( { model | balls = normalizedBall, matingPool = matingpool, counter = 400 }, msg )
