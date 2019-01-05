@@ -15,7 +15,7 @@ import ViewUtils exposing (..)
 
 popSize : Int
 popSize =
-    25
+    35
 
 
 newBall x y =
@@ -87,7 +87,7 @@ subscriptions model =
 
 
 init =
-    { popSize = 25
+    { popSize = popSize
     , balls = [ newBall 50 95 ]
     , counter = 0
     , matingPool = []
@@ -115,7 +115,7 @@ update  msg model =
 
 
 selection ( model, msg )  =
-    (  model , Random.generate EvolutionStart (evolutionGenerator model.popSize model.matingPool) )
+    (  model , Random.generate EvolutionStart (newPopulationGenerator model.popSize model.matingPool) )
 
 
 type alias Rect = {
@@ -313,8 +313,8 @@ createEvolutionStructure g p r =
     }
 
 
-evolutionGenerator : Int -> List a -> Random.Generator (List EvolutionStructure)
-evolutionGenerator popSize matingPool =
+newPopulationGenerator : Int -> List a -> Random.Generator (List EvolutionStructure)
+newPopulationGenerator popSize matingPool =
     let
         randomFloat =
             Random.float 0 1
@@ -372,7 +372,7 @@ makeBallsGenerator =
         randomDna =
             Random.list 400 normalizedVector
     in
-    Random.list 25 (Random.map (\pos -> newBallWithGenes 50 95 pos) randomDna)
+    Random.list popSize (Random.map (\pos -> newBallWithGenes 50 95 pos) randomDna)
 
 
 main =
@@ -408,9 +408,6 @@ evaluate (model , msg) =
 
         normalizedBall =
             List.map (\r -> { r | fitness = r.fitness / maxFit }) ballWithFitness
-
-        tmp =
-            List.map (\u -> u.fitness) normalizedBall
 
         matingpool =
             List.concat (List.map (\r -> evaluateBall r) normalizedBall)
